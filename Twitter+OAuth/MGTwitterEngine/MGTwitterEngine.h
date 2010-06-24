@@ -85,6 +85,8 @@
 
 // Status methods
 
+// Geo Methods
+- (NSString *)getReverseGeocode:(CGFloat)latitude withLong:(CGFloat)longitude;
 - (NSString *)getPublicTimeline; // statuses/public_timeline
 
 - (NSString *)getFollowedTimelineSinceID:(unsigned long)sinceID startingAtPage:(int)pageNum count:(int)count; // statuses/friends_timeline
@@ -96,6 +98,11 @@
 - (NSString *)getUpdate:(unsigned long)updateID; // statuses/show
 - (NSString *)sendUpdate:(NSString *)status; // statuses/update
 - (NSString *)sendUpdate:(NSString *)status inReplyTo:(unsigned long)updateID; // statuses/update
+- (NSString *)sendUpdate:(NSString *)status 
+               inReplyTo:(unsigned long)updateID 
+            withLatitude:(NSNumber *)latitude
+           withLongitude:(NSNumber *)longitude
+             withPlaceId:(NSString*)placeId;
 
 - (NSString *)getRepliesStartingAtPage:(int)pageNum; // statuses/mentions
 - (NSString *)getRepliesSinceID:(unsigned long)sinceID startingAtPage:(int)pageNum count:(int)count; // statuses/mentions

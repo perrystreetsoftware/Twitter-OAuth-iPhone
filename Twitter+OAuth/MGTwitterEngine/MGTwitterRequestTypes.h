@@ -42,6 +42,7 @@ typedef enum _MGTwitterRequestType {
 	MGTwitterBlockEnableRequest, // enable block for the specified user
 	MGTwitterBlockDisableRequest, // disable block for the specified user
     MGTwitterImageRequest, // requesting an image
+    MGTwitterGeoReverseGeocodeRequest,    
 #if YAJL_AVAILABLE
 	MGTwitterSearchRequest, // performing a search
 	MGTwitterSearchCurrentTrendsRequest, // getting the current trends
@@ -61,6 +62,7 @@ typedef enum _MGTwitterResponseType {
 #if YAJL_AVAILABLE
 	MGTwitterSearchResults		= 9,	// search results
 #endif
+    MGTwitterPlaces              = 10
 } MGTwitterResponseType;
 
 // This key is added to each tweet or direct message returned,

@@ -16,11 +16,7 @@
 #if YAJL_AVAILABLE
 	#define API_FORMAT @"json"
 
-	#import "MGTwitterStatusesYAJLParser.h"
-	#import "MGTwitterMessagesYAJLParser.h"
-	#import "MGTwitterUsersYAJLParser.h"
-	#import "MGTwitterMiscYAJLParser.h"
-	#import "MGTwitterSearchYAJLParser.h"
+	#import "SBJSON.h"
 #else
 	#define API_FORMAT @"xml"
 
@@ -592,49 +588,22 @@
 {
     NSString *identifier = [[[connection identifier] copy] autorelease];
     NSData *jsonData = [[[connection data] copy] autorelease];
-    MGTwitterRequestType requestType = [connection requestType];
     MGTwitterResponseType responseType = [connection responseType];
+	NSString *json_string = [[[NSString alloc] initWithData:jsonData encoding:NSUTF8StringEncoding] autorelease];
 
-	NSURL *URL = [connection URL];
-
-#if DEBUG
-	if (NO) {
-		NSLog(@"MGTwitterEngine: jsonData = %@ from %@", [[[NSString alloc] initWithData:jsonData encoding:NSUTF8StringEncoding] autorelease], URL);
+	NSError *error;	
+	SBJSON *parser = [[SBJSON alloc] init];
+	id json = [parser objectWithString:json_string error:&error];
+	NSArray *parsedObjects;
+	
+	if ([json isKindOfClass:[NSArray class]]) {
+		parsedObjects = [NSArray arrayWithArray:json];
+	} else if ([json isKindOfClass:[NSDictionary class]]) {
+		parsedObjects = [NSArray arrayWithObject:json];
 	}
-#endif
-
-    switch (responseType) {
-        case MGTwitterStatuses:
-        case MGTwitterStatus:
-            [MGTwitterStatusesYAJLParser parserWithJSON:jsonData delegate:self 
-                              connectionIdentifier:identifier requestType:requestType 
-                                      responseType:responseType URL:URL deliveryOptions:_deliveryOptions];
-            break;
-        case MGTwitterUsers:
-        case MGTwitterUser:
-            [MGTwitterUsersYAJLParser parserWithJSON:jsonData delegate:self 
-                           connectionIdentifier:identifier requestType:requestType 
-                                   responseType:responseType URL:URL deliveryOptions:_deliveryOptions];
-            break;
-        case MGTwitterDirectMessages:
-        case MGTwitterDirectMessage:
-            [MGTwitterMessagesYAJLParser parserWithJSON:jsonData delegate:self 
-                              connectionIdentifier:identifier requestType:requestType 
-                                      responseType:responseType URL:URL deliveryOptions:_deliveryOptions];
-            break;
-		case MGTwitterMiscellaneous:
-			[MGTwitterMiscYAJLParser parserWithJSON:jsonData delegate:self 
-						  connectionIdentifier:identifier requestType:requestType 
-								  responseType:responseType URL:URL deliveryOptions:_deliveryOptions];
-			break;
-        case MGTwitterSearchResults:
- 			[MGTwitterSearchYAJLParser parserWithJSON:jsonData delegate:self 
-						  connectionIdentifier:identifier requestType:requestType 
-								  responseType:responseType URL:URL deliveryOptions:_deliveryOptions];
-			break;
-       default:
-            break;
-    }
+	[parser release];
+	[self parsingSucceededForRequest:identifier ofResponseType:responseType withParsedObjects:parsedObjects];
+	
 }
 #else
 - (void)_parseDataForConnection:(MGTwitterHTTPURLConnection *)connection
@@ -662,6 +631,7 @@
             break;
         case MGTwitterDirectMessages:
         case MGTwitterDirectMessage:
+        case MGTwitterPlaces:
             [MGTwitterMessagesLibXMLParser parserWithXML:xmlData delegate:self 
                               connectionIdentifier:identifier requestType:requestType 
                                       responseType:responseType URL:URL];
@@ -691,6 +661,7 @@
             break;
         case MGTwitterDirectMessages:
         case MGTwitterDirectMessage:
+        case MGTwitterPlaces:
             [MGTwitterMessagesParser parserWithXML:xmlData delegate:self 
                               connectionIdentifier:identifier requestType:requestType 
                                       responseType:responseType];
@@ -741,6 +712,10 @@
 			if ([self _isValidDelegateForSelector:@selector(miscInfoReceived:forRequest:)])
 				[_delegate miscInfoReceived:parsedObjects forRequest:identifier];
 			break;
+        case MGTwitterPlaces:
+               if ([self _isValidDelegateForSelector:@selector(placeInfoReceived:forRequest:)])
+                       [_delegate placeInfoReceived:parsedObjects forRequest:identifier];
+               break;
 #if YAJL_AVAILABLE
 		case MGTwitterSearchResults:
 			if ([self _isValidDelegateForSelector:@selector(searchResultsReceived:forRequest:)])
@@ -913,6 +888,21 @@
 #pragma mark REST API methods
 #pragma mark -
 
+#pragma mark Geo methods
+- (NSString *)getReverseGeocode:(CGFloat)latitude withLong:(CGFloat)longitude
+{
+
+       NSMutableDictionary *params = [NSMutableDictionary dictionaryWithCapacity:2];
+       [params setObject:[NSString stringWithFormat:@"%f", latitude] forKey:@"lat"];
+       [params setObject:[NSString stringWithFormat:@"%f", longitude] forKey:@"long"];
+       
+       NSString *path = [NSString stringWithFormat:@"geo/reverse_geocode.%@", API_FORMAT];
+    
+       return [self _sendRequestWithMethod:nil path:path queryParameters:params body:nil 
+                            requestType:MGTwitterGeoReverseGeocodeRequest 
+                           responseType:MGTwitterPlaces];      
+}
+
 #pragma mark Status methods
 
 
@@ -1007,14 +997,22 @@
                            responseType:MGTwitterStatus];
 }
 
-
-- (NSString *)sendUpdate:(NSString *)status
+- (NSString *)sendUpdate:(NSString *)status 
 {
-    return [self sendUpdate:status inReplyTo:0];
+	return [self sendUpdate:status inReplyTo:0];
 }
 
+- (NSString *)sendUpdate:(NSString *)status 
+                          inReplyTo:(unsigned long)updateID 
+{
+       return [self sendUpdate:status inReplyTo:updateID withLatitude:nil withLongitude:nil withPlaceId: nil];
+}
 
-- (NSString *)sendUpdate:(NSString *)status inReplyTo:(unsigned long)updateID
+- (NSString *)sendUpdate:(NSString *)status 
+			   inReplyTo:(unsigned long)updateID 
+			withLatitude:(NSNumber *)latitude
+		   withLongitude:(NSNumber *)longitude
+			 withPlaceId:(NSString*)placeId 
 {
     if (!status) {
         return nil;
@@ -1032,6 +1030,19 @@
     if (updateID > 0) {
         [params setObject:[NSString stringWithFormat:@"%u", updateID] forKey:@"in_reply_to_status_id"];
     }
+       if (latitude)
+       {
+               [params setObject:[NSString stringWithFormat:@"%@",latitude] forKey:@"lat"];
+       }
+       if (longitude)
+       {
+               [params setObject:[NSString stringWithFormat:@"%@",longitude] forKey:@"long"];
+       }
+       if (placeId)
+       {
+               [params setObject:placeId forKey:@"place_id"];
+       }
+       
     NSString *body = [self _queryStringWithBase:nil parameters:params prefixed:NO];
     
     return [self _sendRequestWithMethod:HTTP_POST_METHOD path:path 

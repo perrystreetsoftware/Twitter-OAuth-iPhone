@@ -42,6 +42,7 @@ typedef enum _MGTwitterEngineDeliveryOptions {
 - (void)directMessagesReceived:(NSArray *)messages forRequest:(NSString *)connectionIdentifier;
 - (void)userInfoReceived:(NSArray *)userInfo forRequest:(NSString *)connectionIdentifier;
 - (void)miscInfoReceived:(NSArray *)miscInfo forRequest:(NSString *)connectionIdentifier;
+- (void)placeInfoReceived:(NSArray *)placeInfo forRequest:(NSString *)connectionIdentifier;
 #if YAJL_AVAILABLE
 - (void)searchResultsReceived:(NSArray *)searchResults forRequest:(NSString *)connectionIdentifier;
 #endif
