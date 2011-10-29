@@ -8,6 +8,8 @@
 // Original development by Dave Winer.
 //
 
+// Fixed compile bug based on http://colloquy.info/project/ticket/513
+
 #import "NSData+Base64.h"
 
 #import <Foundation/Foundation.h>
@@ -32,7 +34,7 @@ static char encodingTable[64] = {
 		unsigned long ixtext = 0;
 		unsigned long lentext = 0;
 		unsigned char ch = 0;
-		unsigned char inbuf[3], outbuf[4];
+		unsigned char inbuf[4], outbuf[3];
 		short i = 0, ixinbuf = 0;
 		BOOL flignore = NO;
 		BOOL flendtext = NO;
